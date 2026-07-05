@@ -11,35 +11,35 @@ AgentLens 是一个轻量的可观测性平台，专为 LangChain / LangGraph Ag
 
 ## 🖼️ 运行截图
 
-<details>
+<details open>
 <summary><b>📋 1. Trace 列表（按 thread_id 分组）</b></summary>
 
 ![Trace List](docs/screenshots/01-trace-list.jpeg)
 
 </details>
 
-<details>
+<details open>
 <summary><b>🌲 2. Trace 详情 · 调用树（middleware 橙色高亮 + 类名徽章）</b></summary>
 
 ![Call Tree](docs/screenshots/02-call-tree.jpeg)
 
 </details>
 
-<details>
+<details open>
 <summary><b>📊 3. Trace 详情 · 时间线（按时间排序 + 来源标号）</b></summary>
 
 ![Timeline](docs/screenshots/03-timeline.jpeg)
 
 </details>
 
-<details>
+<details open>
 <summary><b>💬 4. Trace 详情 · 消息流（middleware 边界横幅 + summary 紫色气泡）</b></summary>
 
 ![Message Flow](docs/screenshots/04-message-flow.jpeg)
 
 </details>
 
-<details>
+<details open>
 <summary><b>📦 5. Trace 详情 · IO 详情（JSON 折叠）</b></summary>
 
 ![IO Detail](docs/screenshots/05-io-detail.jpeg)
