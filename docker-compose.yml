@@ -1,0 +1,72 @@
+# AgentLens 一键启动
+#
+# 使用：
+#   docker compose up -d            # 后台启动
+#   docker compose logs -f          # 查看日志
+#   docker compose down             # 停止
+#   docker compose down -v          # 停止并删除数据卷
+#
+# 服务：
+#   - frontend: http://localhost:8080
+#   - backend:  http://localhost:8000
+#   - swagger:  http://localhost:8000/docs
+#
+# 自定义：复制 .env.example 为 .env，修改环境变量后再次 up
+
+name: agentlens
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: agentlens/server:0.5.0
+    container_name: agentlens-backend
+    restart: unless-stopped
+    environment:
+      # 存储后端
+      TRACE_STORAGE_BACKEND: ${TRACE_STORAGE_BACKEND:-file}
+      TRACE_FILE_STORAGE_DIR: /app/data/traces
+      # CORS：前端 5173（dev）或 80（compose 内网）
+      TRACE_CORS_ORIGINS: '["http://localhost:5173","http://localhost:8080"]'
+      TRACE_API_PREFIX: /api/v1
+    volumes:
+      - agentlens-data:/app/data
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/traces/count/total').raise_for_status()"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - agentlens-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: agentlens/ui:0.5.0
+    container_name: agentlens-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks:
+      - agentlens-net
+
+networks:
+  agentlens-net:
+    driver: bridge
+
+volumes:
+  agentlens-data:
+    driver: local

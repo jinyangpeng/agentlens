@@ -1,0 +1,32 @@
+# AgentLens 开发模式 docker-compose
+# 与 docker-compose.yml 同时使用：docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# 特性：
+#   - 后端启用 --reload（代码热重载）
+#   - 前端 Vite dev server（端口 5173，HMR + 热更新）
+#   - 源码 bind mount（宿主机改动立即生效）
+#   - 共享 agentlens-data 卷
+
+name: agentlens-dev
+
+services:
+  backend:
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/run.py:/app/run.py:ro
+      - agentlens-data:/app/data
+    environment:
+      PYTHONUNBUFFERED: "1"
+
+  frontend:
+    # 开发模式用 Vite dev server，端口 5173，HMR + 热更新
+    image: node:22-alpine
+    command: ["sh", "-c", "npm install && npx vite --host 0.0.0.0 --port 5173"]
+    working_dir: /build
+    volumes:
+      - ./frontend:/build
+      - /build/node_modules
+    ports:
+      - "5173:5173"
+    profiles: ["dev-frontend"]

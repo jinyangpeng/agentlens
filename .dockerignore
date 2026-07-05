@@ -1,0 +1,44 @@
+# Git / 元数据
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+*.md.bak
+
+# Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.venv
+**/venv
+**/uv.lock
+**/.python-version
+**/*.egg-info
+**/dist/**/*whl
+
+# Node
+**/node_modules
+**/dist
+**/.vite
+
+# 文档与计划
+docs/plans
+README.md
+
+# 测试
+**/tests
+**/.coverage
+**/htmlcov
+
+# Docker 自身
+.dockerignore
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 环境文件（避免泄漏本地配置）
+.env
+.env.local

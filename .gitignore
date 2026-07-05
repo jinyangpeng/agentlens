@@ -1,0 +1,104 @@
+# ============ 操作系统 ============
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+*~
+
+# ============ 编辑器 / IDE ============
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+build/
+dist/
+*.whl
+
+# venv
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.uv-cache/
+
+# 测试 / 覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# 类型检查
+.mypy_cache/
+.ruff_cache/
+
+# ============ Node / Frontend ============
+node_modules/
+.npm
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.vite/
+.turbo
+.next/
+out/
+
+# 构建产物
+frontend/dist/
+frontend/.vite/
+
+# ============ 项目本地数据 ============
+# 后端文件存储默认目录
+backend/data/
+data/
+*.sqlite
+*.sqlite3
+*.db
+
+# AgentLens trace 临时数据
+traces/
+agentlens-data/
+
+# ============ Docker / 环境 ============
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Docker volume 临时挂载点
+.docker-volumes/
+
+# ============ 日志 ============
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# ============ 杂项 ============
+*.bak
+*.tmp
+*.orig
+.cache/
+.DS_Store?
+ehthumbs.db
+Icon?
+network.settings
+
+# 文档 / 计划（保留 README，不排除 plans）
+# docs/plans/ 通常是有意义的设计文档，不忽略

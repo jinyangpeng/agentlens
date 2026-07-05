@@ -1,0 +1,50 @@
+# AgentLens Server Dockerfile
+# 多阶段：构建 wheel + slim 运行时
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# uv 比 pip 快 ~10x
+COPY --from=ghcr.io/astral-sh/uv:0.5.0 /uv /uvx /usr/local/bin/
+
+# 复制后端源码
+COPY backend/pyproject.toml ./
+COPY backend/app ./app
+COPY backend/run.py ./
+
+# 编译为 wheel
+RUN uv build --wheel --out-dir /wheels
+
+
+FROM python:3.11-slim
+
+LABEL org.opencontainers.image.title="agentlens-server"
+LABEL org.opencontainers.image.description="AgentLens: LangChain/LangGraph agent trace collection backend"
+LABEL org.opencontainers.image.version="0.5.0"
+
+# 健康检查
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8000/api/v1/traces/count/total').raise_for_status()" || exit 1
+
+# 非 root 用户
+RUN useradd -m -u 1000 agentlens
+
+WORKDIR /app
+
+# 复制并安装 wheel
+COPY --from=builder /wheels/*.whl /tmp/
+RUN pip install --no-cache-dir /tmp/*.whl \
+    && rm -rf /tmp/*.whl
+
+# 持久化数据目录
+RUN mkdir -p /app/data && chown -R agentlens:agentlens /app
+USER agentlens
+
+EXPOSE 8000
+
+# 默认配置：文件存储，监听 0.0.0.0
+ENV TRACE_STORAGE_BACKEND=file \
+    TRACE_FILE_STORAGE_DIR=/app/data/traces \
+    TRACE_API_PREFIX=/api/v1
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
