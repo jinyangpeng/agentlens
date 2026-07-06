@@ -183,7 +183,7 @@ export default function TraceListTable({ traces, loading }: Props) {
         <p className="text-sm font-medium text-slate-600">暂无 Trace 记录</p>
         <p className="text-xs text-slate-400 mt-1">
           通过 AI Agent callback 推送，或在
-          <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="text-indigo-600 mx-1 hover:underline">
+          <a href="/docs" target="_blank" rel="noreferrer" className="text-indigo-600 mx-1 hover:underline">
             API 文档
           </a>
           手动 POST 一条

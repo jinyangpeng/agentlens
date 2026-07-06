@@ -48,7 +48,7 @@ export default function Sidebar() {
       {/* 底部 */}
       <div className="p-3 border-t border-white/5 space-y-1">
         <a
-          href="http://localhost:8000/docs"
+          href="/docs"
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-3 px-2.5 py-2 rounded-md text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-colors"

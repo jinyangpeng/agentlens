@@ -22,9 +22,9 @@ LABEL org.opencontainers.image.title="agentlens-server"
 LABEL org.opencontainers.image.description="AgentLens: LangChain/LangGraph agent trace collection backend"
 LABEL org.opencontainers.image.version="0.5.0"
 
-# 健康检查
+# 健康检查（用 stdlib urllib，避免依赖第三方 httpx；非 2xx 抛 HTTPError 让 healthcheck 失败）
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/api/v1/traces/count/total').raise_for_status()" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/traces/count/total', timeout=2).read()" || exit 1
 
 # 非 root 用户
 RUN useradd -m -u 1000 agentlens

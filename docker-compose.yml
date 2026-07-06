@@ -26,16 +26,18 @@ services:
     environment:
       # 存储后端
       TRACE_STORAGE_BACKEND: ${TRACE_STORAGE_BACKEND:-file}
-      TRACE_FILE_STORAGE_DIR: /app/data/traces
-      # CORS：前端 5173（dev）或 80（compose 内网）
-      TRACE_CORS_ORIGINS: '["http://localhost:5173","http://localhost:8080"]'
+      # file 存储目录：默认写入容器内 /app/data/traces，配合 volumes 持久化到外部
+      TRACE_FILE_STORAGE_DIR: ${TRACE_FILE_STORAGE_DIR:-/app/data/traces}
+      # CORS：前端 5173（dev）或 ${FRONTEND_PORT}（compose 内网）
+      TRACE_CORS_ORIGINS: '["http://localhost:5173","http://localhost:${FRONTEND_PORT:-8080}"]'
       TRACE_API_PREFIX: /api/v1
     volumes:
-      - agentlens-data:/app/data
+      # - agentlens-data:/app/data
+      - ${TRACE_FILE_STORAGE_HOST_DIR:-./data/traces}:/app/data/traces
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/v1/traces/count/total').raise_for_status()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/traces/count/total', timeout=2).read()"]
       interval: 15s
       timeout: 3s
       retries: 3

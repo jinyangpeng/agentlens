@@ -1,32 +1,42 @@
 # AgentLens 开发模式 docker-compose
 # 与 docker-compose.yml 同时使用：docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 #
-# 特性：
-#   - 后端启用 --reload（代码热重载）
-#   - 前端 Vite dev server（端口 5173，HMR + 热更新）
-#   - 源码 bind mount（宿主机改动立即生效）
-#   - 共享 agentlens-data 卷
+# 行为说明：
+#   - backend: 覆盖 command 为 uvicorn --reload，源码 bind mount
+#   - frontend: 覆盖 image 为 node:22-alpine + Vite dev server（端口 5173，HMR + 热更新）
+#   - 数据卷：沿用基础文件的 bind mount（TRACE_FILE_STORAGE_HOST_DIR → /app/data/traces）
+#
+# 访问：
+#   - 前端 Vite:    http://localhost:${FRONTEND_PORT:-5173}
+#   - 后端 FastAPI: http://localhost:${BACKEND_PORT:-8000}
+#   - Swagger:      http://localhost:${BACKEND_PORT:-8000}/docs
 
 name: agentlens-dev
 
 services:
   backend:
     command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    volumes:
+    volumes: !override
+      # dev 模式：源码 bind mount + 数据 bind mount（覆盖基础文件的 named volume）
       - ./backend/app:/app/app
       - ./backend/run.py:/app/run.py:ro
-      - agentlens-data:/app/data
+      - ${TRACE_FILE_STORAGE_HOST_DIR:-./data/traces}:/app/data/traces
     environment:
       PYTHONUNBUFFERED: "1"
 
   frontend:
-    # 开发模式用 Vite dev server，端口 5173，HMR + 热更新
+    # 开发模式：覆盖生产 nginx 镜像，使用 Vite dev server（容器内 5173，HMR + 热更新）
     image: node:22-alpine
     command: ["sh", "-c", "npm install && npx vite --host 0.0.0.0 --port 5173"]
     working_dir: /build
-    volumes:
+    volumes: !override
       - ./frontend:/build
       - /build/node_modules
-    ports:
-      - "5173:5173"
-    profiles: ["dev-frontend"]
+    ports: !override
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      # Vite proxy 目标：Docker 网络内的后端容器
+      VITE_PROXY_TARGET: http://agentlens-backend:8000
+    # dev 模式没有 nginx /healthz，禁用 healthcheck（vite 启动即算就绪）
+    healthcheck: !override
+      disable: true

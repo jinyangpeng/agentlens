@@ -66,11 +66,3 @@ async def delete_trace(
     ok = await service.delete_trace(trace_id)
     if not ok:
         raise HTTPException(status_code=404, detail="trace not found")
-
-
-@router.get("/count/total")
-async def count_traces(
-    service: TraceService = Depends(get_trace_service),
-) -> dict:
-    """获取 trace 总数。"""
-    return {"count": await service.count_traces()}
