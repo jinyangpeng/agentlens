@@ -65,7 +65,7 @@ def test_tool_events_collected():
 def test_detect_middleware_by_class_name():
     """PIIMiddleware 等内置中间件通过类名后缀识别。"""
     h = TraceCallbackHandler()
-    is_mw, name, node = h._detect_middleware(
+    is_mw, name, node, lc_source = h._detect_middleware(
         serialized={"id": ["langchain", "PIIMiddleware"]},
         name="PIIMiddleware",
         metadata={"langgraph_node": "PIIMiddleware"},
@@ -74,24 +74,28 @@ def test_detect_middleware_by_class_name():
     assert is_mw is True
     assert name == "PIIMiddleware"
     assert node == "PIIMiddleware"
+    assert lc_source == "pii"
 
 
 def test_detect_middleware_by_tag():
     """自定义中间件可通过 tags 显式标注。"""
     h = TraceCallbackHandler()
-    is_mw, _, _ = h._detect_middleware(
+    is_mw, name, _, lc_source = h._detect_middleware(
         serialized={"id": ["x", "y"]},
         name="y",
         metadata={},
         tags=["langchain:middleware:MyGuard"],
     )
     assert is_mw is True
+    # 自定义 middleware 不在内置注册表中：保留候选名，lc_source 为 None
+    assert name == "y"
+    assert lc_source is None
 
 
 def test_detect_middleware_node_name_uppercase():
     """兜底：node_name 首字母大写且非核心 node。"""
     h = TraceCallbackHandler()
-    is_mw, name, node = h._detect_middleware(
+    is_mw, name, node, lc_source = h._detect_middleware(
         serialized={},
         name=None,
         metadata={"langgraph_node": "MyCustomMiddleware"},
@@ -100,12 +104,14 @@ def test_detect_middleware_node_name_uppercase():
     assert is_mw is True
     assert node == "MyCustomMiddleware"
     assert name == "MyCustomMiddleware"
+    # 非内置 middleware：lc_source 为 None
+    assert lc_source is None
 
 
 def test_not_middleware_for_agent_node():
     """agent 核心 node 不被误判。"""
     h = TraceCallbackHandler()
-    is_mw, _, node = h._detect_middleware(
+    is_mw, _, node, _ = h._detect_middleware(
         serialized={"id": ["langchain", "agent"]},
         name="agent",
         metadata={"langgraph_node": "agent"},
@@ -118,7 +124,7 @@ def test_not_middleware_for_agent_node():
 def test_not_middleware_for_tools_node():
     """tools 核心 node 不被误判。"""
     h = TraceCallbackHandler()
-    is_mw, _, _ = h._detect_middleware(
+    is_mw, _, _, _ = h._detect_middleware(
         serialized={"id": ["langchain", "tools"]},
         name="tools",
         metadata={"langgraph_node": "tools"},
@@ -144,6 +150,7 @@ def test_middleware_event_marked_in_payload():
     assert start_ev.is_middleware is True
     assert start_ev.middleware_name == "PIIMiddleware"
     assert start_ev.node_name == "PIIMiddleware"
+    assert start_ev.lc_source == "pii"
 
 
 def test_chain_end_inherits_middleware_metadata():
@@ -161,4 +168,6 @@ def test_chain_end_inherits_middleware_metadata():
     payload = mock_client.send.call_args.args[0]
     end_ev = next(e for e in payload.events if e.event_type == "chain_end")
     assert end_ev.is_middleware is True
-    assert end_ev.middleware_name == "PIIMiddleware[custom].before_model"
+    # 模糊匹配将 "PIIMiddleware[custom].before_model" 标准化为内置 "PIIMiddleware"
+    assert end_ev.middleware_name == "PIIMiddleware"
+    assert end_ev.lc_source == "pii"

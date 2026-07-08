@@ -20,7 +20,7 @@ FROM python:3.11-slim
 
 LABEL org.opencontainers.image.title="agentlens-server"
 LABEL org.opencontainers.image.description="AgentLens: LangChain/LangGraph agent trace collection backend"
-LABEL org.opencontainers.image.version="0.5.0"
+LABEL org.opencontainers.image.version="0.6.0"
 
 # 健康检查（用 stdlib urllib，避免依赖第三方 httpx；非 2xx 抛 HTTPError 让 healthcheck 失败）
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
@@ -31,9 +31,15 @@ RUN useradd -m -u 1000 agentlens
 
 WORKDIR /app
 
-# 复制并安装 wheel
+# 复制并安装 wheel（含 sqlalchemy + aiosqlite）
+# PostgreSQL 支持：设置 BUILD_ARG INSTALL_POSTGRES=1 安装 asyncpg
+ARG INSTALL_POSTGRES=0
 COPY --from=builder /wheels/*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/*.whl \
+RUN if [ "$INSTALL_POSTGRES" = "1" ]; then \
+        pip install --no-cache-dir /tmp/*.whl[postgres] ; \
+    else \
+        pip install --no-cache-dir /tmp/*.whl ; \
+    fi \
     && rm -rf /tmp/*.whl
 
 # 持久化数据目录
@@ -45,6 +51,7 @@ EXPOSE 8000
 # 默认配置：文件存储，监听 0.0.0.0
 ENV TRACE_STORAGE_BACKEND=file \
     TRACE_FILE_STORAGE_DIR=/app/data/traces \
-    TRACE_API_PREFIX=/api/v1
+    TRACE_API_PREFIX=/api/v1 \
+    TRACE_DATABASE_URL=
 
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

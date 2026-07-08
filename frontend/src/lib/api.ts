@@ -1,4 +1,5 @@
 import type { Trace } from "@/types/trace";
+import type { Overview, StatsDimension, TokenStats } from "@/types/stats";
 
 const BASE = "/api/v1";
 
@@ -26,4 +27,15 @@ export const api = {
   deleteTrace: (id: string) =>
     request<void>(`/traces/${id}`, { method: "DELETE" }),
   countTraces: () => request<{ count: number }>(`/traces/count/total`),
+  getOverview: () => request<Overview>(`/stats/overview`),
+  getTokenStats: (
+    dimension: StatsDimension,
+    startDate?: string,
+    endDate?: string
+  ) => {
+    const params = new URLSearchParams({ dimension });
+    if (startDate) params.set("start_date", startDate);
+    if (endDate) params.set("end_date", endDate);
+    return request<TokenStats>(`/stats/tokens?${params.toString()}`);
+  },
 };

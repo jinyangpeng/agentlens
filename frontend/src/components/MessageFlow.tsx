@@ -2,7 +2,13 @@ import { Fragment } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Wrench, Clock, Settings2, FileText } from "lucide-react";
+import {
+  Wrench, Clock, Settings2,
+  FileText, UserCheck, Gauge, Repeat, ShieldAlert,
+  ListTodo, MousePointerClick, RefreshCw, Terminal,
+  Edit3, SquareTerminal, FolderSearch,
+  type LucideIcon,
+} from "lucide-react";
 import type { TraceEvent } from "@/types/trace";
 
 interface ResponseMeta {
@@ -30,10 +36,184 @@ interface Props {
   startTime?: string | null;
 }
 
+// ---- Middleware 配置表（与后端 middleware_registry.py 对齐） ----
+
+interface MiddlewareConf {
+  className: string; // 标准类名（用于显示和旧数据回填匹配）
+  label: string; // 显示名
+  icon: LucideIcon; // 图标组件
+  color: string; // 文字颜色 e.g. "text-purple-600"
+  bg: string; // 背景色 e.g. "bg-purple-50"
+  border: string; // 边框色 e.g. "border-purple-200"
+  dot: string; // 圆点色 e.g. "bg-purple-500"
+  description: string; // 简短描述
+}
+
+const MIDDLEWARE_CONF: Record<string, MiddlewareConf> = {
+  summarization: {
+    className: "SummarizationMiddleware",
+    label: "摘要压缩",
+    icon: FileText,
+    color: "text-purple-600",
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+    description: "自动摘要历史消息",
+  },
+  human_in_the_loop: {
+    className: "HumanInTheLoopMiddleware",
+    label: "人工审批",
+    icon: UserCheck,
+    color: "text-amber-600",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    dot: "bg-amber-500",
+    description: "人工审批工具调用",
+  },
+  model_call_limit: {
+    className: "ModelCallLimitMiddleware",
+    label: "模型调用限制",
+    icon: Gauge,
+    color: "text-rose-600",
+    bg: "bg-rose-50",
+    border: "border-rose-200",
+    dot: "bg-rose-500",
+    description: "限制模型调用次数",
+  },
+  tool_call_limit: {
+    className: "ToolCallLimitMiddleware",
+    label: "工具调用限制",
+    icon: Wrench,
+    color: "text-orange-600",
+    bg: "bg-orange-50",
+    border: "border-orange-200",
+    dot: "bg-orange-500",
+    description: "限制工具调用次数",
+  },
+  model_fallback: {
+    className: "ModelFallbackMiddleware",
+    label: "模型回退",
+    icon: Repeat,
+    color: "text-cyan-600",
+    bg: "bg-cyan-50",
+    border: "border-cyan-200",
+    dot: "bg-cyan-500",
+    description: "模型失败时回退到备选模型",
+  },
+  pii: {
+    className: "PIIMiddleware",
+    label: "PII 脱敏",
+    icon: ShieldAlert,
+    color: "text-red-600",
+    bg: "bg-red-50",
+    border: "border-red-200",
+    dot: "bg-red-500",
+    description: "PII 检测和脱敏",
+  },
+  todo_list: {
+    className: "TodoListMiddleware",
+    label: "任务清单",
+    icon: ListTodo,
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    dot: "bg-blue-500",
+    description: "任务规划和跟踪",
+  },
+  llm_tool_selector: {
+    className: "LLMToolSelectorMiddleware",
+    label: "LLM 工具选择",
+    icon: MousePointerClick,
+    color: "text-teal-600",
+    bg: "bg-teal-50",
+    border: "border-teal-200",
+    dot: "bg-teal-500",
+    description: "LLM 工具选择",
+  },
+  tool_retry: {
+    className: "ToolRetryMiddleware",
+    label: "工具重试",
+    icon: RefreshCw,
+    color: "text-yellow-600",
+    bg: "bg-yellow-50",
+    border: "border-yellow-200",
+    dot: "bg-yellow-500",
+    description: "工具调用失败自动重试",
+  },
+  llm_tool_emulator: {
+    className: "LLMToolEmulator",
+    label: "LLM 工具模拟",
+    icon: Terminal,
+    color: "text-slate-600",
+    bg: "bg-slate-50",
+    border: "border-slate-200",
+    dot: "bg-slate-500",
+    description: "LLM 工具模拟",
+  },
+  context_editing: {
+    className: "ContextEditingMiddleware",
+    label: "上下文编辑",
+    icon: Edit3,
+    color: "text-indigo-600",
+    bg: "bg-indigo-50",
+    border: "border-indigo-200",
+    dot: "bg-indigo-500",
+    description: "上下文编辑",
+  },
+  shell_tool: {
+    className: "ShellToolMiddleware",
+    label: "Shell 会话",
+    icon: SquareTerminal,
+    color: "text-zinc-600",
+    bg: "bg-zinc-50",
+    border: "border-zinc-200",
+    dot: "bg-zinc-500",
+    description: "Shell 会话",
+  },
+  filesystem_file_search: {
+    className: "FilesystemFileSearchMiddleware",
+    label: "文件搜索",
+    icon: FolderSearch,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    dot: "bg-emerald-500",
+    description: "文件系统搜索",
+  },
+};
+
+// 反向映射：用于旧数据（无 lc_source）通过 middleware_name 模糊匹配
+const MW_KEYWORDS: Array<{ keyword: string; lcSource: string }> = Object.entries(
+  MIDDLEWARE_CONF
+).map(([lcSource, conf]) => ({
+  // 去掉 "Middleware" 后缀作为关键词，小写
+  keyword: conf.className.replace("Middleware", "").toLowerCase(),
+  lcSource,
+}));
+
+/** 解析事件的 lc_source；优先用字段，缺失时通过 middleware_name 模糊匹配回填。 */
+function resolveEventLcSource(event: TraceEvent): string | null {
+  if (event.lc_source && event.lc_source in MIDDLEWARE_CONF) {
+    return event.lc_source;
+  }
+  const name = event.middleware_name || event.node_name;
+  if (name) {
+    const nameLower = name.toLowerCase();
+    for (const { keyword, lcSource } of MW_KEYWORDS) {
+      if (keyword && nameLower.includes(keyword)) {
+        return lcSource;
+      }
+    }
+  }
+  return null;
+}
+
 function getType(m: Message): string {
-  // SummarizationMiddleware 注入的 summary 消息：type="human" + additional_kwargs.lc_source="summarization"
-  if (m.additional_kwargs?.lc_source === "summarization") {
-    return "summary";
+  // Middleware 注入的消息：additional_kwargs.lc_source 标识来源
+  // 检查所有已知 middleware 类型，而非仅 summarization
+  const lcSource = m.additional_kwargs?.lc_source;
+  if (typeof lcSource === "string" && lcSource in MIDDLEWARE_CONF) {
+    return lcSource;
   }
   return m.type ?? m._type ?? "unknown";
 }
@@ -98,6 +278,7 @@ const TYPE_CONF: Record<
   ToolMessage: { label: "工具", dot: "bg-amber-500", align: "center", bg: "bg-amber-50", border: "border-amber-200" },
   system: { label: "系统", dot: "bg-slate-500", align: "center", bg: "bg-slate-50", border: "border-slate-200" },
   SystemMessage: { label: "系统", dot: "bg-slate-500", align: "center", bg: "bg-slate-50", border: "border-slate-200" },
+  // 向后兼容：旧数据无 lc_source 字段时可能命中 "summary"
   summary: { label: "Summary (压缩)", dot: "bg-purple-500", align: "center", bg: "bg-purple-50", border: "border-purple-300" },
 };
 
@@ -135,9 +316,14 @@ export default function MessageFlow({ messages, structuredResponse, events = [],
 
   /** 计算 middleware 行为描述：start 描述输入状态，end 描述输出影响 */
   function describeMw(mw: TraceEvent, kind: "start" | "end"): string | null {
+    const lcSource = resolveEventLcSource(mw);
     const name = mw.middleware_name || mw.node_name || "";
+    // 向后兼容：无 lc_source 时回退到 name 匹配
+    const isPii = lcSource === "pii" || (!lcSource && name.includes("PII"));
+    const isSummarization =
+      lcSource === "summarization" || (!lcSource && name.includes("Summarization"));
     if (kind === "start") {
-      if (name.includes("PII")) {
+      if (isPii) {
         const text = JSON.stringify(mw.inputs ?? {});
         const email = (text.match(/[\w.-]+@[\w.-]+/g) || []).length;
         const phone = (text.match(/\b1[3-9]\d{9}\b/g) || []).length;
@@ -151,19 +337,19 @@ export default function MessageFlow({ messages, structuredResponse, events = [],
         }
         return "扫描中（未发现 PII）";
       }
-      if (name.includes("Summarization")) {
+      if (isSummarization) {
         const s = summarizeMessages((mw.inputs as { messages?: unknown } | undefined)?.messages);
         if (s) return `历史 ${s.count} 条 / ${s.chars} 字符`;
       }
       return null;
     } else {
-      if (name.includes("PII")) {
+      if (isPii) {
         const text = JSON.stringify(mw.outputs ?? {});
         const redacted = (text.match(/\[REDACTED_[A-Z_]+\]/g) || []).length;
         if (redacted > 0) return `脱敏 ${redacted} 处`;
         return "未脱敏";
       }
-      if (name.includes("Summarization")) {
+      if (isSummarization) {
         const s = summarizeMessages((mw.outputs as { messages?: unknown } | undefined)?.messages);
         if (s) return `压缩后 ${s.count} 条 / ${s.chars} 字符`;
       }
@@ -187,19 +373,29 @@ export default function MessageFlow({ messages, structuredResponse, events = [],
       <div className={`flex flex-col gap-3`}>
         {msgs.map((m, i) => {
           const t = getType(m);
-          const conf = TYPE_CONF[t] ?? {
-            label: t,
-            dot: "bg-slate-400",
-            align: "left" as const,
-            bg: "bg-white",
-            border: "border-slate-200",
-          };
+          // middleware 注入的消息优先用 MIDDLEWARE_CONF，否则用 TYPE_CONF
+          const mwConf = MIDDLEWARE_CONF[t];
+          const conf = mwConf
+            ? {
+                label: mwConf.label,
+                dot: mwConf.dot,
+                align: "center" as const,
+                bg: mwConf.bg,
+                border: mwConf.border,
+              }
+            : TYPE_CONF[t] ?? {
+                label: t,
+                dot: "bg-slate-400",
+                align: "left" as const,
+                bg: "bg-white",
+                border: "border-slate-200",
+              };
           const text = getContentText(m.content);
           const isAI = t === "ai" || t === "AIMessage";
           // AI 显示模型名（类似 tool 显示工具名）
           const subName = isAI ? getModelName(m) : m.name;
-          // summary 类型显示来源标识
-          const isSummary = t === "summary";
+          // middleware 注入的消息
+          const isMwMessage = !!mwConf;
           const time = fmtTime(times[i]);
           // 该消息时间之前最近的 middleware
           const msgTs = times[i] ? new Date(times[i]!).getTime() : null;
@@ -216,24 +412,32 @@ export default function MessageFlow({ messages, structuredResponse, events = [],
                 const endEv = slot?.end;
                 const startHint = describeMw(mw, "start");
                 const endHint = endEv ? describeMw(endEv, "end") : null;
+                // 按 lc_source 查配置；未知 middleware 回退到默认橙色
+                const mwLcSource = resolveEventLcSource(mw);
+                const mwCfg = mwLcSource ? MIDDLEWARE_CONF[mwLcSource] : null;
+                const bannerBg = mwCfg?.bg ?? "bg-orange-50";
+                const bannerBorder = mwCfg?.border ?? "border-orange-200";
+                const bannerText = mwCfg?.color ?? "text-orange-800";
+                const BannerIcon = mwCfg?.icon ?? Settings2;
+                const displayName = mwCfg?.className ?? mw.middleware_name ?? mw.node_name ?? "Middleware";
                 return (
                   <div
                     key={`mw-${mw.event_id}`}
-                    className="my-1.5 px-3 py-2 rounded-md bg-orange-50 border border-orange-200 text-xs text-orange-800"
+                    className={`my-1.5 px-3 py-2 rounded-md ${bannerBg} ${bannerBorder} text-xs ${bannerText} border`}
                   >
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Settings2 className="w-3.5 h-3.5 shrink-0" />
-                      <span className="font-semibold">{mw.middleware_name || mw.node_name}</span>
-                      {mw.node_name && mw.node_name !== mw.middleware_name && (
-                        <span className="text-orange-600/70 mono">({mw.node_name})</span>
+                      <BannerIcon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="font-semibold">{displayName}</span>
+                      {mw.node_name && mw.node_name !== displayName && (
+                        <span className="opacity-70 mono">({mw.node_name})</span>
                       )}
                       {startHint && (
-                        <span className="mono text-orange-700/80">· {startHint}</span>
+                        <span className="mono opacity-80">· {startHint}</span>
                       )}
                       {endHint && (
                         <>
-                          <span className="text-orange-500">→</span>
-                          <span className="mono text-orange-700 font-medium">{endHint}</span>
+                          <span className="opacity-60">→</span>
+                          <span className="mono font-medium">{endHint}</span>
                         </>
                       )}
                     </div>
@@ -243,14 +447,18 @@ export default function MessageFlow({ messages, structuredResponse, events = [],
               <div className={`flex flex-col ${justify(conf.align)}`}>
                 <div className="flex items-center gap-1.5 mb-1 px-0.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${conf.dot}`} />
-                  {isSummary && <FileText className="w-3 h-3 text-purple-600" />}
+                  {isMwMessage && mwConf && (
+                    <mwConf.icon className={`w-3 h-3 ${mwConf.color}`} />
+                  )}
                   <span className="text-[11px] font-medium text-slate-500">
                     {conf.label}
                     {subName ? ` · ${subName}` : ""}
                   </span>
-                  {isSummary && (
-                    <span className="text-[10px] mono px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
-                      by SummarizationMiddleware
+                  {isMwMessage && mwConf && (
+                    <span
+                      className={`text-[10px] mono px-1.5 py-0.5 rounded ${mwConf.bg} ${mwConf.color} border ${mwConf.border}`}
+                    >
+                      by {mwConf.className}
                     </span>
                   )}
                   {time && (

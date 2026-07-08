@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 class EventType(str, Enum):
     LLM_START = "llm_start"
-    CHAT_MODEL_START = "chat_model_start"
+    CHAT_MODEL_START = "chat_model_start"  # 向后兼容，新数据统一用 llm_start
     LLM_END = "llm_end"
     LLM_NEW_TOKEN = "llm_new_token"
     LLM_ERROR = "llm_error"
@@ -45,3 +45,5 @@ class Event(BaseModel):
     is_middleware: bool = False
     middleware_name: str | None = None
     node_name: str | None = None  # LangGraph node 名（来自 metadata.langgraph_node）
+    # 标准化 middleware 标识符（来自 client 端 middleware_registry），便于前端按类型渲染
+    lc_source: str | None = None

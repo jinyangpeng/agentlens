@@ -6,7 +6,6 @@ import { Settings2, Hash, Layers, GitBranch } from "lucide-react";
 
 const TYPE_VARIANT: Record<string, "info" | "success" | "failed" | "neutral"> = {
   llm_start: "info",
-  chat_model_start: "info",
   llm_end: "info",
   chain_start: "success",
   chain_end: "success",
@@ -41,7 +40,9 @@ export default function EventCard({ event, depth, index, sourceIndex, sourceName
   return (
     <div
       className={`rounded-lg border bg-white px-3.5 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_1px_3px_rgba(15,23,42,0.08)] transition-all ${
-        event.is_middleware
+        isError
+          ? "border-red-300 bg-red-50/30 hover:border-red-400"
+          : event.is_middleware
           ? "border-orange-300 hover:border-orange-400"
           : "border-slate-200 hover:border-slate-300"
       }`}
@@ -97,7 +98,11 @@ export default function EventCard({ event, depth, index, sourceIndex, sourceName
             <JsonViewer data={event.inputs} label="输入" />
           )}
           {event.outputs !== undefined && event.outputs !== null && !isEmpty(event.outputs) && (
-            <JsonViewer data={event.outputs} label="输出" />
+            <JsonViewer
+              data={event.outputs}
+              label={isError ? "错误信息" : "输出"}
+              defaultOpen={isError}
+            />
           )}
         </div>
       ) : null}

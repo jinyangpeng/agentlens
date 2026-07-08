@@ -6,10 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.config import settings
+from app.dependencies import init_storage
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 初始化存储后端（数据库自动建表）
+    await init_storage()
     yield
 
 

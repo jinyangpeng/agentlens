@@ -1,8 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { Activity, ListTree, Github, BookOpen } from "lucide-react";
+import { Activity, ListTree, Github, BookOpen, BarChart3 } from "lucide-react";
 
 const NAV = [
   { to: "/", label: "Traces", icon: ListTree, desc: "调用轨迹" },
+  { to: "/stats", label: "统计", icon: BarChart3, desc: "Token 消耗统计" },
 ];
 
 export default function Sidebar() {
@@ -57,7 +58,7 @@ export default function Sidebar() {
           <span>API 文档</span>
         </a>
         <a
-          href="https://github.com"
+          href="https://github.com/jinyangpeng/agentlens"
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-3 px-2.5 py-2 rounded-md text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-colors"

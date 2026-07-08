@@ -21,6 +21,7 @@ services:
       - ./backend/app:/app/app
       - ./backend/run.py:/app/run.py:ro
       - ${TRACE_FILE_STORAGE_HOST_DIR:-./data/traces}:/app/data/traces
+      - ${TRACE_DB_HOST_DIR:-./data/db}:/app/data/db
     environment:
       PYTHONUNBUFFERED: "1"
 

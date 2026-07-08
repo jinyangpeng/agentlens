@@ -1,6 +1,6 @@
 [project]
 name = "agentlens-cb"
-version = "0.5.0"
+version = "0.6.0"
 description = "AgentLens: LangChain/LangGraph callback handler that pushes agent traces to the AgentLens server"
 requires-python = ">=3.11"
 dependencies = [

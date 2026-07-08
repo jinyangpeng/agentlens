@@ -1,7 +1,7 @@
 # AgentLens 一键启动
 #
 # 使用：
-#   docker compose up -d            # 后台启动
+#   docker compose up -d            # 后台启动（默认 SQLite 存储）
 #   docker compose logs -f          # 查看日志
 #   docker compose down             # 停止
 #   docker compose down -v          # 停止并删除数据卷
@@ -10,6 +10,11 @@
 #   - frontend: http://localhost:8080
 #   - backend:  http://localhost:8000
 #   - swagger:  http://localhost:8000/docs
+#
+# 存储后端：
+#   file      — JSON 文件存储（默认，零配置）
+#   sqlite    — SQLite 数据库（默认 ./data/traces.db）
+#   postgresql — PostgreSQL（需启用下方 postgres 服务）
 #
 # 自定义：复制 .env.example 为 .env，修改环境变量后再次 up
 
@@ -20,20 +25,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.server
-    image: agentlens/server:0.5.0
+    image: agentlens/server:0.6.0
     container_name: agentlens-backend
     restart: unless-stopped
     environment:
-      # 存储后端
+      # 存储后端：file | sqlite | postgresql
       TRACE_STORAGE_BACKEND: ${TRACE_STORAGE_BACKEND:-file}
-      # file 存储目录：默认写入容器内 /app/data/traces，配合 volumes 持久化到外部
+      # file 存储目录
       TRACE_FILE_STORAGE_DIR: ${TRACE_FILE_STORAGE_DIR:-/app/data/traces}
+      # 数据库连接串（sqlite/postgresql 时使用）
+      TRACE_DATABASE_URL: ${TRACE_DATABASE_URL:-}
       # CORS：前端 5173（dev）或 ${FRONTEND_PORT}（compose 内网）
       TRACE_CORS_ORIGINS: '["http://localhost:5173","http://localhost:${FRONTEND_PORT:-8080}"]'
       TRACE_API_PREFIX: /api/v1
     volumes:
-      # - agentlens-data:/app/data
+      # file 存储 + SQLite 数据库共用 /app/data 目录
       - ${TRACE_FILE_STORAGE_HOST_DIR:-./data/traces}:/app/data/traces
+      - ${TRACE_DB_HOST_DIR:-./data/db}:/app/data/db
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     healthcheck:
@@ -44,12 +52,16 @@ services:
       start_period: 10s
     networks:
       - agentlens-net
+    # PostgreSQL 依赖（取消注释以启用 PostgreSQL）
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.ui
-    image: agentlens/ui:0.5.0
+    image: agentlens/ui:0.6.0
     container_name: agentlens-frontend
     restart: unless-stopped
     depends_on:
@@ -65,10 +77,33 @@ services:
     networks:
       - agentlens-net
 
+  # PostgreSQL 服务（可选，取消注释以启用）
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: agentlens-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: agentlens
+  #     POSTGRES_USER: agentlens
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentlens}
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U agentlens"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #   networks:
+  #     - agentlens-net
+
 networks:
   agentlens-net:
     driver: bridge
 
 volumes:
   agentlens-data:
+    driver: local
+  pgdata:
     driver: local

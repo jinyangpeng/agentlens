@@ -1,5 +1,6 @@
 export type EventType =
   | "llm_start" | "chat_model_start" | "llm_end" | "llm_new_token" | "llm_error"
+  // chat_model_start 向后兼容旧数据，新数据统一用 llm_start
   | "chain_start" | "chain_end" | "chain_error"
   | "tool_start" | "tool_end" | "tool_error"
   | "retriever_start" | "retriever_end"
@@ -24,6 +25,8 @@ export interface TraceEvent {
   is_middleware?: boolean;
   middleware_name?: string | null;
   node_name?: string | null;
+  // 标准化 middleware 标识符（与后端 middleware_registry 对齐）
+  lc_source?: string | null;
 }
 
 export interface Trace {

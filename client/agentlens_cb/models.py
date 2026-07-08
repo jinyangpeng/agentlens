@@ -29,6 +29,8 @@ class EventPayload(BaseModel):
     is_middleware: bool = False
     middleware_name: str | None = None
     node_name: str | None = None  # LangGraph node 名（来自 metadata.langgraph_node）
+    # 标准化 middleware 标识符（来自 middleware_registry），便于前端按类型渲染
+    lc_source: str | None = None
 
 
 class TracePayload(BaseModel):

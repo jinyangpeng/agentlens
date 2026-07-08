@@ -161,6 +161,12 @@ export default function ThreadDetailPage() {
                             {new Date(t.start_time).toLocaleString("zh-CN", { hour12: false })}
                           </span>
                         )}
+                        {t.error && (
+                          <div className="w-full mt-1.5 rounded border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700">
+                            <span className="font-mono font-medium">{t.error.type}:</span>{" "}
+                            {t.error.message}
+                          </div>
+                        )}
                       </div>
                       <MessageFlow
                         messages={t.messages}
